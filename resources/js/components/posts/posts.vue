@@ -5,6 +5,7 @@
             <p>{{ post.description }}</p>
             <hr>
         </div>
+        <div v-if="!hasNextPage" v-observe-visibility="visibilityChanged">...</div>
     </div>
 </template>
 
@@ -16,6 +17,12 @@ import axios from 'axios'
             this.fetchPosts()
         },
 
+        computed: {
+            hasNextPage() {
+                return this.posts.meta.current_page === this.posts.meta.last_page
+            }
+        },
+
         data() {
             return {
                 posts: {
@@ -24,19 +31,33 @@ import axios from 'axios'
                         current_page: 1,
                         last_page: 1,
                     }
-                }
+                },
+                page: 1
             }
         },
 
         methods: {
             fetchPosts() {
-                axios.get('/api/v1/posts')
+
+                axios.get(`/api/v1/posts?page=${this.page}`)
                     .then(response => {
-                        this.posts = response.data
+                        this.posts.data.push(...response.data.data)
+                        this.posts.meta = response.data.meta
                     })
                     .catch(response => {
                         console.log(response)
                     })
+            },
+
+            visibilityChanged (isVisible) {
+
+                if (!isVisible) return;
+
+                if (this.hasNextPage) return;
+
+                this.page++
+
+                this.fetchPosts()
             }
         },
     }
